@@ -1,0 +1,201 @@
+# Architecture Specification Language (ASL) v1.4
+# campaign-attribution-api · acme-platform
+# Provider-agnostic · compiler resolves to AWS / GCP / Azure
+# Generated: 2026-06-10T04:31:28Z
+
+architecture:
+  metadata:
+    system:
+      display_name: Campaign Attribution API
+      architecture_schema_version: "1.0"
+      version: "1.4"
+      status: active
+
+  system:
+    system_type: event_driven_api
+    business_purpose: >
+      Real-time campaign attribution tracking.
+      Multi-region, SOC2 compliant, provider-agnostic.
+
+  environments:
+    - key: prod_live
+      lifecycle: production
+      role: live
+      region:
+        geography: us
+        tier: primary
+        latency_zone: east
+
+    - key: prod_dr
+      lifecycle: dr_standby
+      role: standby_dr
+      region:
+        geography: us
+        tier: dr
+        latency_zone: central
+      recovery:
+        rto: 15m
+        rpo: 5m
+
+  components:
+  - id: http_gateway_1781065888219
+    name: "http gateway 1781065888219"
+    kind: api_gateway
+    capability: http_gateway
+    lifecycle: production
+
+    spec:
+      compute:
+        cpu: 1
+        memory_gb: 2
+        tier: standard
+      availability:
+        ha: false
+        replicas: 0
+      scaling:
+        profile: autoscaled
+        min_instances: 1
+        max_instances: 5
+        target_cpu_pct: 70
+      region:
+        geography: us
+        tier: primary
+
+    policy:
+      data_classification: internal
+      encryption_at_rest: true
+      encryption_in_transit: true
+      internet_exposed: false
+      backup_required: false
+
+  - id: load_balancer_1781065939734
+    name: "load balancer 1781065939734"
+    kind: load_balancer
+    capability: load_balancer
+    lifecycle: production
+
+    spec:
+      compute:
+        throughput_mb_per_sec: 100
+      availability:
+        ha: true
+        replicas: 0
+      scaling:
+        profile: autoscaled
+        min_instances: 1
+        max_instances: 0
+      region:
+        geography: us
+        tier: primary
+
+    policy:
+      data_classification: internal
+      encryption_at_rest: true
+      encryption_in_transit: true
+      internet_exposed: false
+      backup_required: false
+
+  - id: http_api_1781065949848
+    name: "http api 1781065949848"
+    kind: service
+    capability: http_api
+    lifecycle: production
+
+    spec:
+      compute:
+        cpu: 1
+        memory_gb: 2
+        tier: standard
+      availability:
+        ha: false
+        replicas: 0
+      scaling:
+        profile: autoscaled
+        min_instances: 1
+        max_instances: 5
+        target_cpu_pct: 70
+      region:
+        geography: us
+        tier: primary
+
+    policy:
+      data_classification: internal
+      encryption_at_rest: true
+      encryption_in_transit: true
+      internet_exposed: false
+      backup_required: false
+
+  - id: relational_db_1781065952773
+    name: "relational db 1781065952773"
+    kind: database
+    capability: relational_db
+    lifecycle: production
+
+    spec:
+      compute:
+        cpu: 2
+        memory_gb: 8
+        tier: standard
+      storage:
+        size_gb: 100
+        type: ssd
+        iops: 3000
+        autogrow: true
+      availability:
+        ha: false
+        multi_az: false
+        replicas: 0
+        backup_retention_days: 7
+      scaling:
+        profile: fixed
+        min_instances: 1
+        max_instances: 1
+      region:
+        geography: us
+        tier: primary
+      role:
+        mode: master
+        read_only: false
+
+    policy:
+      data_classification: internal
+      encryption_at_rest: true
+      encryption_in_transit: true
+      internet_exposed: false
+      backup_required: false
+
+  - id: load_balancer_1781072119725
+    name: "load balancer 1781072119725"
+    kind: load_balancer
+    capability: load_balancer
+    lifecycle: production
+
+    spec:
+      compute:
+        throughput_mb_per_sec: 100
+      availability:
+        ha: true
+        replicas: 0
+      scaling:
+        profile: autoscaled
+        min_instances: 1
+        max_instances: 0
+      region:
+        geography: us
+        tier: primary
+
+    policy:
+      data_classification: internal
+      encryption_at_rest: true
+      encryption_in_transit: true
+      internet_exposed: false
+      backup_required: false
+
+  relationships:
+  - id: e-1781065952774
+    from: load_balancer_1781065939734
+    to: relational_db_1781065952773
+    protocol: sql
+    mode: synchronous
+    criticality: normal
+    label: sql
