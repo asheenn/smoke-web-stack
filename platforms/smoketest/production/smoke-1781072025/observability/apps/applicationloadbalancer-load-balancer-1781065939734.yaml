@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: applicationloadbalancer-load-balancer-1781065939734
+  namespace: argocd
+  labels:
+    kubernova.io/tenant: f2aa1ded-64e9-44a0-afb6-312c54d2c117
+    kubernova.io/platform: smoketest
+    kubernova.io/environment: production
+    kubernova.io/package: agent-crossplane-claims
+    kubernova.io/package-version: 1.0.0
+spec:
+  project: f2aa1ded-64e9-44a0-afb6-312c54d2c117
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  sources:
+  - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    chart: opentelemetry-collector
+    targetRevision: 0.153.0
+    helm:
+      releaseName: applicationloadbalancer-load-balancer-1781065939734
+      valueFiles:
+      - $values/platforms/smoketest/production/smoke-1781072025/observability/values/applicationloadbalancer-load-balancer-1781065939734.values.yaml
+  - repoURL: https://github.com/asheenn/smoke-web-stack.git
+    targetRevision: HEAD
+    ref: values
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
+    automated:
+      prune: true
+      selfHeal: true
