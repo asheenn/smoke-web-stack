@@ -1,0 +1,35 @@
+apiVersion: vestifix.acme.io/v1
+kind: Architecture
+metadata:
+  name: web-stack
+  labels:
+    architecture_schema_version: "1.0"
+    version: "1.0"
+spec:
+  components:
+    - id: api_1781113052055
+      type: api_gateway
+      name: api
+      config: {"protocol":"HTTP"}
+    - id: edge_1781113052056
+      type: load_balancer
+      name: edge
+      config: {"kind":"application","scheme":"internet-facing"}
+    - id: core_1781113052056
+      type: load_balancer
+      name: core
+      config: {"kind":"network","scheme":"internal"}
+    - id: web_1781113052056
+      type: service
+      name: web
+      config: {"runtime":"nodejs","port":8080}
+    - id: primary_1781113052056
+      type: database
+      name: primary
+      config: {"engine":"aurora-postgresql","engine_version":"15.4"}
+  connections:
+    - { from: "api", to: "edge" }
+    - { from: "edge", to: "web" }
+    - { from: "web", to: "core" }
+    - { from: "core", to: "primary" }
+    - { from: "web", to: "primary" }
