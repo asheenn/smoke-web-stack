@@ -1,0 +1,170 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xlambdas.compute.smoketest.kubernova.io
+  labels:
+    app.kubernetes.io/managed-by: kubernova
+    kubernova.io/platform: smoketest
+    kubernova.io/service: lambda
+spec:
+  group: compute.smoketest.kubernova.io
+  names:
+    kind: XLambda
+    plural: xlambdas
+  claimNames:
+    kind: Lambda
+    plural: lambdas
+  defaultCompositionRef:
+    name: lambda-aws-smoketest
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    description: AWS region
+                    default: us-east-1
+                  functionName:
+                    type: string
+                    description: Lambda function name (defaults to the diagram node
+                      label).
+                  runtime:
+                    type: string
+                    description: Lambda runtime. Use `provided.al2023` for container
+                      images.
+                    enum:
+                    - python3.12
+                    - python3.11
+                    - python3.10
+                    - nodejs20.x
+                    - nodejs18.x
+                    - java21
+                    - java17
+                    - java11
+                    - go1.x
+                    - provided.al2023
+                    default: python3.12
+                  handler:
+                    type: string
+                    description: Entry point in the form module.function (ignored
+                      for container images).
+                    default: index.handler
+                  memoryMb:
+                    type: integer
+                    description: Memory in MB (also scales CPU proportionally).
+                    minimum: 128
+                    maximum: 10240
+                    default: 512
+                  timeoutSeconds:
+                    type: integer
+                    description: Max execution time in seconds (1 to 900).
+                    minimum: 1
+                    maximum: 900
+                    default: 30
+                  architecture:
+                    type: string
+                    description: CPU architecture.
+                    enum:
+                    - x86_64
+                    - arm64
+                    default: x86_64
+                  code:
+                    type: object
+                    properties:
+                      s3Bucket:
+                        type: string
+                        description: S3 bucket holding the function zip.
+                      s3Key:
+                        type: string
+                        description: S3 key for the function zip.
+                      imageUri:
+                        type: string
+                        description: ECR image URI (alternative to s3Bucket+s3Key).
+                  environment:
+                    type: object
+                    description: Map of env-var name to value.
+                    additionalProperties: true
+                  vpc:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Bind the function to a VPC (required to reach
+                          private RDS / EKS).
+                        default: false
+                      subnetSelector:
+                        type: string
+                        description: Which subnet tier the function attaches to when
+                          vpc.enabled.
+                        enum:
+                        - private
+                        - database
+                        default: private
+                  encryption:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Encrypt env vars at rest with a customer KMS
+                          key.
+                        default: true
+                  reservedConcurrency:
+                    type: integer
+                    description: Cap concurrent executions for cost / blast-radius
+                      control.
+                    minimum: 0
+                    maximum: 1000
+                  tags:
+                    type: object
+                    description: Free-form tags applied to the function and its execution
+                      role.
+                    additionalProperties: true
+                  deletionPolicy:
+                    type: string
+                    description: Crossplane deletion policy.
+                    enum:
+                    - Delete
+                    - Orphan
+                    default: Delete
+                  refs:
+                    type: object
+                    description: References to dependent claim names, populated by
+                      the canvas. Keys are ref_keys from required_deps (e.g. network,
+                      kms).
+                    additionalProperties:
+                      type: string
+                required:
+                - region
+              compositionRef:
+                type: object
+                additionalProperties: true
+              compositionSelector:
+                type: object
+                additionalProperties: true
+              compositionRevisionRef:
+                type: object
+                additionalProperties: true
+              compositionUpdatePolicy:
+                type: string
+              writeConnectionSecretToRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+            required:
+            - parameters
+          status:
+            type: object
+            additionalProperties: true
