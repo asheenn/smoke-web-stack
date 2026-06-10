@@ -1,0 +1,80 @@
+# Architecture Specification Language (ASL) v1.4
+# Lambda + HTTP API Gateway smoke env
+architecture:
+  metadata:
+    system:
+      display_name: Lambda + HTTP API Gateway
+      architecture_schema_version: "1.0"
+      version: "1.0"
+      status: active
+
+  system:
+    system_type: serverless_api
+    business_purpose: Smoke test of Lambda invoked by HTTP API Gateway.
+
+  environments:
+    - key: prod_live
+      lifecycle: production
+      role: live
+      region:
+        geography: us
+        tier: primary
+        latency_zone: east
+
+  components:
+  - id: serverless_fn_1781117304959
+    name: serverless-fn
+    kind: function
+    capability: serverless_fn
+    lifecycle: production
+    spec:
+      compute:
+        memory_mb: 512
+        timeout_sec: 30
+        concurrency: 100
+      availability:
+        ha: true
+      scaling:
+        profile: serverless
+        min_instances: 0
+        max_instances: 500
+      region:
+        geography: us
+        tier: primary
+    policy:
+      data_classification: internal
+      encryption_at_rest: true
+      encryption_in_transit: true
+      internet_exposed: false
+
+  - id: http_gateway_1781117333623
+    name: http-gateway
+    kind: api_gateway
+    capability: http_gateway
+    lifecycle: production
+    spec:
+      compute:
+        cpu: 1
+        memory_gb: 2
+        tier: standard
+      availability:
+        ha: false
+      scaling:
+        profile: autoscaled
+        min_instances: 1
+        max_instances: 5
+        target_cpu_pct: 70
+      region:
+        geography: us
+        tier: primary
+    policy:
+      data_classification: internal
+      encryption_at_rest: true
+      encryption_in_transit: true
+      internet_exposed: true
+
+  relationships:
+    - from: http_gateway_1781117333623
+      to: serverless_fn_1781117304959
+      protocol: invoke
+      label: trigger
