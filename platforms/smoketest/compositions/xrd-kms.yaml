@@ -1,0 +1,127 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xkmskeys.security.smoketest.kubernova.io
+  labels:
+    app.kubernetes.io/managed-by: kubernova
+    kubernova.io/platform: smoketest
+    kubernova.io/service: kms
+spec:
+  group: security.smoketest.kubernova.io
+  names:
+    kind: XKmsKey
+    plural: xkmskeys
+  claimNames:
+    kind: KmsKey
+    plural: kmskeys
+  defaultCompositionRef:
+    name: kms-aws-smoketest
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    description: AWS region. KMS keys are regional.
+                    default: us-east-1
+                  alias:
+                    type: string
+                    description: Friendly alias (without 'alias/' prefix). The alias
+                      makes the key referenceable by name across MRs. Defaults to
+                      the diagram node label.
+                  description:
+                    type: string
+                    description: Free-text description shown in the AWS console.
+                    default: ''
+                  keyUsage:
+                    type: string
+                    description: Key usage. ENCRYPT_DECRYPT covers ~all data-at-rest
+                      cases; SIGN_VERIFY is for signing-only keys (JWT signers, code-signing).
+                    enum:
+                    - ENCRYPT_DECRYPT
+                    - SIGN_VERIFY
+                    default: ENCRYPT_DECRYPT
+                  customerMasterKeySpec:
+                    type: string
+                    description: Cryptographic configuration. SYMMETRIC_DEFAULT is
+                      AES-256-GCM.
+                    enum:
+                    - SYMMETRIC_DEFAULT
+                    - RSA_2048
+                    - RSA_3072
+                    - RSA_4096
+                    - ECC_NIST_P256
+                    - ECC_NIST_P384
+                    - ECC_NIST_P521
+                    - ECC_SECG_P256K1
+                    - HMAC_224
+                    - HMAC_256
+                    - HMAC_384
+                    - HMAC_512
+                    default: SYMMETRIC_DEFAULT
+                  enableKeyRotation:
+                    type: boolean
+                    description: Automatic annual rotation. Recommended on for all
+                      symmetric keys protecting long-lived data.
+                    default: true
+                  deletionWindowInDays:
+                    type: integer
+                    description: Days between `kubectl delete` and actual key destruction
+                      in AWS. AWS minimum 7, maximum 30. Lower = faster cleanup; higher
+                      = more recovery window.
+                    minimum: 7
+                    maximum: 30
+                    default: 30
+                  deletionPolicy:
+                    type: string
+                    description: Crossplane deletion policy for the MR.
+                    enum:
+                    - Delete
+                    - Orphan
+                    default: Delete
+                  providerConfigName:
+                    type: string
+                    description: Crossplane ProviderConfig to use.
+                    default: aws-default
+                  refs:
+                    type: object
+                    description: References to dependent claim names, populated by
+                      the canvas. Keys are ref_keys from required_deps (e.g. network,
+                      kms).
+                    additionalProperties:
+                      type: string
+                required:
+                - region
+              compositionRef:
+                type: object
+                additionalProperties: true
+              compositionSelector:
+                type: object
+                additionalProperties: true
+              compositionRevisionRef:
+                type: object
+                additionalProperties: true
+              compositionUpdatePolicy:
+                type: string
+              writeConnectionSecretToRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+            required:
+            - parameters
+          status:
+            type: object
+            additionalProperties: true

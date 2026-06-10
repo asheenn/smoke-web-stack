@@ -1,0 +1,160 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xapplicationloadbalancers.network.smoketest.kubernova.io
+  labels:
+    app.kubernetes.io/managed-by: kubernova
+    kubernova.io/platform: smoketest
+    kubernova.io/service: alb
+spec:
+  group: network.smoketest.kubernova.io
+  names:
+    kind: XApplicationLoadBalancer
+    plural: xapplicationloadbalancers
+  claimNames:
+    kind: ApplicationLoadBalancer
+    plural: applicationloadbalancers
+  defaultCompositionRef:
+    name: alb-aws-smoketest
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    description: AWS region
+                    default: us-east-1
+                  lbName:
+                    type: string
+                    description: AWS-side LB name. Defaults to the diagram node label.
+                  scheme:
+                    type: string
+                    description: Internet-facing or VPC-internal. ALB defaults to
+                      internet-facing since it's L7.
+                    enum:
+                    - internet-facing
+                    - internal
+                    default: internet-facing
+                  ipAddressType:
+                    type: string
+                    description: Single-stack IPv4 or dual-stack IPv4+IPv6.
+                    enum:
+                    - ipv4
+                    - dualstack
+                    default: ipv4
+                  subnetSelector:
+                    type: string
+                    description: auto = pick public for internet-facing, private for
+                      internal.
+                    enum:
+                    - auto
+                    - public
+                    - private
+                    default: auto
+                  listenerRules:
+                    type: array
+                    description: 'Routing rules, e.g. [{host: ''api.example.com'',
+                      path: ''/v1/*'', targetGroup: ''svc-a'', port: 443, protocol:
+                      HTTPS}].'
+                    items:
+                      type: string
+                  idleTimeoutSeconds:
+                    type: integer
+                    description: Connection idle timeout (1-4000).
+                    minimum: 1
+                    maximum: 4000
+                    default: 60
+                  http2Enabled:
+                    type: boolean
+                    description: Accept HTTP/2 from clients.
+                    default: true
+                  deletionProtection:
+                    type: boolean
+                    description: Block accidental delete in the AWS console / API.
+                    default: false
+                  tls:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Terminate HTTPS at the ALB (requires an ACM cert
+                          dep).
+                        default: true
+                      policy:
+                        type: string
+                        description: TLS security policy on the HTTPS listener.
+                        enum:
+                        - ELBSecurityPolicy-TLS13-1-2-2021-06
+                        - ELBSecurityPolicy-TLS-1-2-2017-01
+                        - ELBSecurityPolicy-FS-1-2-Res-2020-10
+                        default: ELBSecurityPolicy-TLS13-1-2-2021-06
+                  waf:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Attach an AWS WAF web ACL in front of the ALB.
+                        default: false
+                  accessLogs:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Write access logs to S3 (incurs S3 cost).
+                        default: false
+                      s3Bucket:
+                        type: string
+                        description: Destination bucket for access logs.
+                  tags:
+                    type: object
+                    description: Free-form AWS tags applied to the LB and target groups.
+                    additionalProperties: true
+                  deletionPolicy:
+                    type: string
+                    description: Crossplane deletion policy.
+                    enum:
+                    - Delete
+                    - Orphan
+                    default: Delete
+                  refs:
+                    type: object
+                    description: References to dependent claim names, populated by
+                      the canvas. Keys are ref_keys from required_deps (e.g. network,
+                      kms).
+                    additionalProperties:
+                      type: string
+                required:
+                - region
+              compositionRef:
+                type: object
+                additionalProperties: true
+              compositionSelector:
+                type: object
+                additionalProperties: true
+              compositionRevisionRef:
+                type: object
+                additionalProperties: true
+              compositionUpdatePolicy:
+                type: string
+              writeConnectionSecretToRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+            required:
+            - parameters
+          status:
+            type: object
+            additionalProperties: true

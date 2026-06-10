@@ -1,0 +1,229 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xrdss.database.smoketest.kubernova.io
+  labels:
+    app.kubernetes.io/managed-by: kubernova
+    kubernova.io/platform: smoketest
+    kubernova.io/service: rds
+spec:
+  group: database.smoketest.kubernova.io
+  names:
+    kind: XRds
+    plural: xrdss
+  claimNames:
+    kind: Rds
+    plural: rdses
+  defaultCompositionRef:
+    name: rds-aws-smoketest
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    description: AWS region
+                    default: us-east-1
+                  dbIdentifier:
+                    type: string
+                    description: AWS-side DB identifier. Defaults to the diagram node
+                      label.
+                  engine:
+                    type: string
+                    description: Database engine
+                    enum:
+                    - postgres
+                    - mysql
+                    - mariadb
+                    - aurora-postgresql
+                    - aurora-mysql
+                    default: postgres
+                  engineVersion:
+                    type: string
+                    description: Engine version (latest for the chosen engine if unset)
+                    default: '16.3'
+                  instanceClass:
+                    type: string
+                    description: Instance class (e.g. db.t3.medium, db.r6g.large,
+                      db.m6i.xlarge)
+                    default: db.t3.medium
+                  allocatedStorage:
+                    type: integer
+                    description: Storage in GB
+                    minimum: 5
+                    default: 20
+                  maxAllocatedStorage:
+                    type: integer
+                    description: Max GB for storage autoscaling (0 = disabled)
+                    minimum: 0
+                    default: 0
+                  storageType:
+                    type: string
+                    description: EBS storage type
+                    enum:
+                    - gp2
+                    - gp3
+                    - io1
+                    - io2
+                    default: gp3
+                  iops:
+                    type: integer
+                    description: Provisioned IOPS (0 = AWS default for storageType).
+                      Required for io1/io2.
+                    minimum: 0
+                    default: 0
+                  storageThroughput:
+                    type: integer
+                    description: Throughput in MB/s (gp3 only; 0 = AWS default of
+                      125)
+                    minimum: 0
+                    default: 0
+                  dbName:
+                    type: string
+                    description: Initial database name created on the instance
+                    default: appdb
+                  masterUsername:
+                    type: string
+                    description: Master username (cannot be 'admin' on some engines)
+                    default: dbadmin
+                  manageMasterUserPassword:
+                    type: boolean
+                    description: Use AWS Secrets Manager for the master credential
+                      (recommended)
+                    default: true
+                  multiAZ:
+                    type: boolean
+                    description: Multi-AZ standby replica (single-Instance engines
+                      only; Aurora handles HA via clusterInstances)
+                    default: false
+                  auroraInstances:
+                    type: integer
+                    description: Aurora cluster instance count (1 writer + N-1 readers).
+                      Ignored for non-Aurora engines.
+                    minimum: 1
+                    maximum: 15
+                    default: 1
+                  backupRetentionPeriod:
+                    type: integer
+                    description: Days to keep automated backups
+                    minimum: 0
+                    maximum: 35
+                    default: 7
+                  backupWindow:
+                    type: string
+                    description: Daily backup window (UTC, e.g. '02:00-03:00')
+                  maintenanceWindow:
+                    type: string
+                    description: Weekly maintenance window (UTC, e.g. 'sun:03:00-sun:04:00')
+                  copyTagsToSnapshot:
+                    type: boolean
+                    description: Copy resource tags onto automated + manual snapshots
+                    default: true
+                  snapshotIdentifier:
+                    type: string
+                    description: Restore from this RDS snapshot ARN/ID instead of
+                      creating an empty DB
+                  enabledCloudwatchLogsExports:
+                    type: array
+                    description: Engine log types to ship to CloudWatch Logs (e.g.
+                      ['postgresql','upgrade'])
+                    items:
+                      type: string
+                  storageEncrypted:
+                    type: boolean
+                    description: Encrypt storage at rest (uses the network's KMS key
+                      when shared)
+                    default: true
+                  kmsKeyId:
+                    type: string
+                    description: BYO KMS key ARN/alias for storage + master secret
+                      encryption (blank = use the network's managed key)
+                  deletionProtection:
+                    type: boolean
+                    description: Deletion protection (default ON to prevent accidental
+                      deletes)
+                    default: true
+                  publiclyAccessible:
+                    type: boolean
+                    description: "Assign a public IP (DEFAULT OFF \u2014 DBs should\
+                      \ never be public)"
+                    default: false
+                  allowedSourceCidrs:
+                    type: array
+                    description: Extra CIDRs allowed inbound on the engine port (in
+                      addition to the EKS node-sg)
+                    items:
+                      type: string
+                  autoMinorVersionUpgrade:
+                    type: boolean
+                    description: Auto-apply minor version patches during the maintenance
+                      window
+                    default: true
+                  performanceInsightsEnabled:
+                    type: boolean
+                    description: Enable Performance Insights
+                    default: false
+                  monitoringInterval:
+                    type: integer
+                    description: 'Enhanced Monitoring sampling interval (0 = off;
+                      valid: 1, 5, 10, 15, 30, 60)'
+                    minimum: 0
+                    maximum: 60
+                    default: 0
+                  tags:
+                    type: object
+                    description: Free-form tags applied to every generated AWS resource
+                    additionalProperties: true
+                  deletionPolicy:
+                    type: string
+                    description: Crossplane deletion policy
+                    enum:
+                    - Delete
+                    - Orphan
+                    default: Delete
+                  providerConfigName:
+                    type: string
+                    description: AWS ProviderConfig name
+                    default: aws-default
+                  refs:
+                    type: object
+                    description: References to dependent claim names, populated by
+                      the canvas. Keys are ref_keys from required_deps (e.g. network,
+                      kms).
+                    additionalProperties:
+                      type: string
+                required:
+                - region
+              compositionRef:
+                type: object
+                additionalProperties: true
+              compositionSelector:
+                type: object
+                additionalProperties: true
+              compositionRevisionRef:
+                type: object
+                additionalProperties: true
+              compositionUpdatePolicy:
+                type: string
+              writeConnectionSecretToRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+            required:
+            - parameters
+          status:
+            type: object
+            additionalProperties: true

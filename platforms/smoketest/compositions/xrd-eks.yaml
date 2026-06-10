@@ -1,0 +1,225 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xekss.compute.smoketest.kubernova.io
+  labels:
+    app.kubernetes.io/managed-by: kubernova
+    kubernova.io/platform: smoketest
+    kubernova.io/service: eks
+spec:
+  group: compute.smoketest.kubernova.io
+  names:
+    kind: XEks
+    plural: xekss
+  claimNames:
+    kind: Eks
+    plural: ekses
+  defaultCompositionRef:
+    name: eks-aws-smoketest
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    description: AWS region
+                    default: us-east-1
+                  clusterName:
+                    type: string
+                    description: AWS-side EKS cluster name. Defaults to the diagram
+                      node label.
+                  version:
+                    type: string
+                    description: Kubernetes version
+                    default: '1.31'
+                  preset:
+                    type: string
+                    description: Environment preset
+                    enum:
+                    - development
+                    - staging
+                    - production
+                    - fedramp
+                    default: development
+                  multiAZ:
+                    type: boolean
+                    description: Multi-AZ deployment
+                    default: true
+                  computeMode:
+                    type: string
+                    description: Compute mode
+                    enum:
+                    - managed-nodes
+                    - fargate
+                    - hybrid
+                    - karpenter
+                    default: managed-nodes
+                  nodeInstanceType:
+                    type: string
+                    description: Instance type
+                    default: t3.medium
+                  nodeDesiredCount:
+                    type: integer
+                    description: Desired nodes
+                    minimum: 1
+                    default: 2
+                  nodeMinCount:
+                    type: integer
+                    description: Min nodes
+                    minimum: 0
+                    default: 1
+                  nodeMaxCount:
+                    type: integer
+                    description: Max nodes
+                    minimum: 1
+                    default: 10
+                  endpointPublicAccess:
+                    type: boolean
+                    description: Public API endpoint
+                    default: true
+                  endpointPrivateAccess:
+                    type: boolean
+                    description: Private API endpoint
+                    default: true
+                  encryption:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Encrypt K8s secrets
+                        default: false
+                  enableIRSA:
+                    type: boolean
+                    description: IAM Roles for Service Accounts
+                    default: true
+                  logging:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Control plane logging
+                        default: false
+                  authenticationMode:
+                    type: string
+                    description: Auth mode
+                    enum:
+                    - CONFIG_MAP
+                    - API
+                    - API_AND_CONFIG_MAP
+                    default: API_AND_CONFIG_MAP
+                  adminPrincipals:
+                    type: array
+                    description: 'IAM principal ARNs (users or roles) granted cluster
+                      admin via AccessEntry + AccessPolicyAssociation. Example: [''arn:aws:iam::123456789012:user/alice'',
+                      ''arn:aws:iam::123456789012:role/PlatformAdmin'']. If unset,
+                      the backend falls back to KUBERNOVA_DEFAULT_ADMIN_ARNS.'
+                    items:
+                      type: string
+                  nodeAzStrategy:
+                    type: string
+                    description: "Whether worker nodes run in one AZ (single) or spread\
+                      \ across both (multi). Cluster control plane is always multi-AZ\
+                      \ \u2014 AWS requires it. Default follows the env's az_strategy."
+                    enum:
+                    - single
+                    - multi
+                    default: multi
+                  nodeGroups:
+                    type: array
+                    description: 'List of NodeGroup specs (general/spot/gpu/etc.).
+                      Each item: {name, instanceTypes[], capacityType, amiType, diskSize,
+                      desiredSize, minSize, maxSize, labels{}, taints[{key,value,effect}],
+                      useLaunchTemplate}. When empty, falls back to the legacy single-NG
+                      fields.'
+                    items:
+                      type: string
+                  vpcEndpoints:
+                    type: array
+                    description: 'VPC Endpoints to provision: s3, dynamodb, ecr-api,
+                      ecr-dkr, sts, ssm, ssmmessages, ec2messages, logs, elasticloadbalancing,
+                      autoscaling, kms, secretsmanager.'
+                    items:
+                      type: string
+                  addons:
+                    type: object
+                    properties:
+                      vpcCni:
+                        type: boolean
+                        description: Install vpc-cni addon
+                        default: true
+                      coreDns:
+                        type: boolean
+                        description: Install coredns addon
+                        default: true
+                      kubeProxy:
+                        type: boolean
+                        description: Install kube-proxy addon
+                        default: true
+                      ebsCsi:
+                        type: boolean
+                        description: Install aws-ebs-csi-driver addon (with IRSA role)
+                        default: false
+                      efsCsi:
+                        type: boolean
+                        description: Install aws-efs-csi-driver addon (with IRSA role)
+                        default: false
+                  tags:
+                    type: object
+                    description: 'Free-form tags applied to every generated AWS resource
+                      (e.g. {environment: prod, owner: platform-team}).'
+                    additionalProperties: true
+                  deletionPolicy:
+                    type: string
+                    description: Crossplane deletion policy for every generated managed
+                      resource.
+                    enum:
+                    - Delete
+                    - Orphan
+                    default: Delete
+                  providerConfigName:
+                    type: string
+                    description: Name of the aws.upbound.io ProviderConfig the function
+                      should use for every generated managed resource.
+                    default: aws-default
+                  refs:
+                    type: object
+                    description: References to dependent claim names, populated by
+                      the canvas. Keys are ref_keys from required_deps (e.g. network,
+                      kms).
+                    additionalProperties:
+                      type: string
+                required:
+                - region
+              compositionRef:
+                type: object
+                additionalProperties: true
+              compositionSelector:
+                type: object
+                additionalProperties: true
+              compositionRevisionRef:
+                type: object
+                additionalProperties: true
+              compositionUpdatePolicy:
+                type: string
+              writeConnectionSecretToRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+            required:
+            - parameters
+          status:
+            type: object
+            additionalProperties: true

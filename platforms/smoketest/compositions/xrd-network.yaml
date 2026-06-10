@@ -1,0 +1,175 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xnetworks.network.smoketest.kubernova.io
+  labels:
+    app.kubernetes.io/managed-by: kubernova
+    kubernova.io/platform: smoketest
+    kubernova.io/service: network
+spec:
+  group: network.smoketest.kubernova.io
+  names:
+    kind: XNetwork
+    plural: xnetworks
+  claimNames:
+    kind: Network
+    plural: networks
+  defaultCompositionRef:
+    name: network-aws-smoketest
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    description: AWS region
+                    default: us-east-1
+                  vpcName:
+                    type: string
+                    description: AWS-side VPC name (Name tag). Defaults to the diagram
+                      node label.
+                  cidrBlock:
+                    type: string
+                    description: VPC CIDR block
+                    default: 10.0.0.0/16
+                  multiAZ:
+                    type: boolean
+                    description: Deploy across 2-3 AZs (legacy toggle; explicit `subnets`
+                      overrides)
+                    default: true
+                  securityGroups:
+                    type: array
+                    description: SG types to create (cluster-sg, node-sg, database-sg)
+                    items:
+                      type: string
+                    default:
+                    - cluster-sg
+                    - node-sg
+                  subnets:
+                    type: object
+                    description: "Declarative subnet topology \u2014 keyed by tier\
+                      \ (public/private) with per-subnet cidrBlock + availabilityZone.\
+                      \ Overrides multiAZ."
+                    additionalProperties: true
+                  internetGateway:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Provision an Internet Gateway (set false for
+                          private-only VPC).
+                        default: true
+                  natGateway:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Provision NAT Gateway(s) for private-subnet egress.
+                        default: true
+                      mode:
+                        type: string
+                        description: single = one NAT shared across AZs (cheaper);
+                          per-az = one per AZ (HA).
+                        enum:
+                        - single
+                        - per-az
+                        default: single
+                  databaseTier:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Carve a separate database subnet tier in this
+                          VPC (set when an RDS service consumes this network)
+                        default: false
+                  privateSubnetPrefix:
+                    type: integer
+                    description: Auto-derived private subnet prefix (smaller number
+                      = more IPs per AZ; default 28 = 16 IPs)
+                    minimum: 16
+                    maximum: 28
+                    default: 28
+                  publicSubnetPrefix:
+                    type: integer
+                    description: Auto-derived public subnet prefix (default 28 = 16
+                      IPs)
+                    minimum: 16
+                    maximum: 28
+                    default: 28
+                  databaseSubnetPrefix:
+                    type: integer
+                    description: Auto-derived database subnet prefix (default 28 =
+                      16 IPs, sufficient for most RDS deployments)
+                    minimum: 16
+                    maximum: 28
+                    default: 28
+                  routeTables:
+                    type: object
+                    properties:
+                      public:
+                        type: boolean
+                        description: "Create a public route table (0.0.0.0/0 \u2192\
+                          \ IGW)."
+                        default: true
+                      private:
+                        type: boolean
+                        description: "Create private route table(s) (0.0.0.0/0 \u2192\
+                          \ NAT)."
+                        default: true
+                  tags:
+                    type: object
+                    description: Free-form tags applied to every generated AWS resource.
+                    additionalProperties: true
+                  deletionPolicy:
+                    type: string
+                    description: Crossplane deletion policy.
+                    enum:
+                    - Delete
+                    - Orphan
+                    default: Delete
+                  providerConfigName:
+                    type: string
+                    description: aws.upbound.io ProviderConfig name.
+                    default: aws-default
+                  refs:
+                    type: object
+                    description: References to dependent claim names, populated by
+                      the canvas. Keys are ref_keys from required_deps (e.g. network,
+                      kms).
+                    additionalProperties:
+                      type: string
+                required:
+                - region
+              compositionRef:
+                type: object
+                additionalProperties: true
+              compositionSelector:
+                type: object
+                additionalProperties: true
+              compositionRevisionRef:
+                type: object
+                additionalProperties: true
+              compositionUpdatePolicy:
+                type: string
+              writeConnectionSecretToRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+            required:
+            - parameters
+          status:
+            type: object
+            additionalProperties: true

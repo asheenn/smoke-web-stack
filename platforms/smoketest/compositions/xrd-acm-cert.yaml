@@ -1,0 +1,120 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xacmcertificates.security.smoketest.kubernova.io
+  labels:
+    app.kubernetes.io/managed-by: kubernova
+    kubernova.io/platform: smoketest
+    kubernova.io/service: acm-cert
+spec:
+  group: security.smoketest.kubernova.io
+  names:
+    kind: XAcmCertificate
+    plural: xacmcertificates
+  claimNames:
+    kind: AcmCertificate
+    plural: acmcertificates
+  defaultCompositionRef:
+    name: acm-cert-aws-smoketest
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    description: "AWS region. CloudFront certificates MUST be in us-east-1\
+                      \ \u2014 ACM enforces this. ALB certificates go in the same\
+                      \ region as the LB."
+                    default: us-east-1
+                  domainName:
+                    type: string
+                    description: Primary domain name on the certificate (e.g. `app.example.com`
+                      or `*.example.com` for a wildcard). Must be DNS-resolvable for
+                      validation to succeed.
+                  subjectAlternativeNames:
+                    type: array
+                    description: Additional SANs. Each must be DNS-resolvable in the
+                      same Route53 hosted zone (or pre-validated).
+                    items:
+                      type: string
+                  validationMethod:
+                    type: string
+                    description: How AWS proves you own the domain. DNS is auto-renewable;
+                      EMAIL needs manual click-through every 13 months.
+                    enum:
+                    - DNS
+                    - EMAIL
+                    default: DNS
+                  validationRoute53:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: Auto-create the Route53 records that prove domain
+                          ownership. Requires the hosted zone for `domainName` to
+                          already exist in this account. Disable if validation is
+                          managed elsewhere.
+                        default: true
+                  keyAlgorithm:
+                    type: string
+                    description: Public-key algorithm. ECDSA is faster and smaller
+                      but not all clients support it.
+                    enum:
+                    - RSA_2048
+                    - EC_prime256v1
+                    - EC_secp384r1
+                    default: RSA_2048
+                  deletionPolicy:
+                    type: string
+                    description: Crossplane deletion policy for the MR.
+                    enum:
+                    - Delete
+                    - Orphan
+                    default: Delete
+                  providerConfigName:
+                    type: string
+                    description: Crossplane ProviderConfig to use.
+                    default: aws-default
+                  refs:
+                    type: object
+                    description: References to dependent claim names, populated by
+                      the canvas. Keys are ref_keys from required_deps (e.g. network,
+                      kms).
+                    additionalProperties:
+                      type: string
+                required:
+                - domainName
+                - region
+              compositionRef:
+                type: object
+                additionalProperties: true
+              compositionSelector:
+                type: object
+                additionalProperties: true
+              compositionRevisionRef:
+                type: object
+                additionalProperties: true
+              compositionUpdatePolicy:
+                type: string
+              writeConnectionSecretToRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+            required:
+            - parameters
+          status:
+            type: object
+            additionalProperties: true

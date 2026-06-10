@@ -1,0 +1,29 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: kms-aws-smoketest
+  labels:
+    app.kubernetes.io/managed-by: kubernova
+    kubernova.io/platform: smoketest
+    kubernova.io/service: kms
+    kubernova.io/provider: aws
+    provider: aws
+spec:
+  compositeTypeRef:
+    apiVersion: security.smoketest.kubernova.io/v1alpha1
+    kind: XKmsKey
+  mode: Pipeline
+  pipeline:
+  - step: render
+    functionRef:
+      name: fn-aws-kms
+    input:
+      apiVersion: fn-aws-kms.kubernova.io/v1alpha1
+      kind: Input
+      spec:
+        platform: smoketest
+        service: kms
+        provider: aws
+  - step: auto-ready
+    functionRef:
+      name: function-auto-ready
