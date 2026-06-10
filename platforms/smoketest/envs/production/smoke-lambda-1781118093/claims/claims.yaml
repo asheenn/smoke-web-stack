@@ -13,8 +13,8 @@ spec:
   parameters:
     region: us-east-1
     runtime: nodejs20.x
-    memorySize: 512
-    timeout: 30
+    memoryMb: 512
+    timeoutSeconds: 30
     handler: index.handler
 ---
 apiVersion: compute.smoketest.kubernova.io/v1alpha1
@@ -31,4 +31,3 @@ spec:
   parameters:
     region: us-east-1
     protocolType: HTTP
-    targetFunction: serverless-fn
